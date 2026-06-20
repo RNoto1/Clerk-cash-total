@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CASH PICKUP — ARCADE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0118;
+    --bg2: #140330;
+    --panel: #1a0a3a;
+    --panel-line: #3d1d7a;
+    --cyan: #00f0ff;
+    --magenta: #ff2bd6;
+    --lime: #aaff00;
+    --yellow: #ffe600;
+    --orange: #ff7b00;
+    --red: #ff3b3b;
+    --dim: #8a7bb8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100%; }
+  body {
+    font-family: 'VT323', monospace;
+    background:
+      radial-gradient(circle at 50% 0%, #1d0850 0%, var(--bg) 60%),
+      var(--bg);
+    color: #fff;
+    padding: 0 14px 96px;
+    position: relative;
+    overflow-x: hidden;
+  }
+  /* scanlines */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(0,0,0,0) 0px,
+      rgba(0,0,0,0) 2px,
+      rgba(0,0,0,.18) 3px,
+      rgba(0,0,0,.18) 4px
+    );
+    pointer-events: none;
+    z-index: 50;
+    mix-blend-mode: multiply;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; position: relative; z-index: 1; }
+
+  .pixel { font-family: 'Press Start 2P', monospace; }
+
+  header {
+    text-align: center;
+    padding: 34px 0 18px;
+  }
+  header h1 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 22px;
+    line-height: 1.5;
+    color: var(--yellow);
+    text-shadow: 0 0 8px var(--orange), 3px 3px 0 var(--magenta);
+    letter-spacing: 1px;
+  }
+  header .sub {
+    font-size: 20px;
+    color: var(--cyan);
+    margin-top: 10px;
+    letter-spacing: 2px;
+    text-shadow: 0 0 8px var(--cyan);
+  }
+  .blink { animation: blink 1.1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .scoreboard {
+    border: 3px solid var(--cyan);
+    border-radius: 6px;
+    background: rgba(0,30,40,.5);
+    box-shadow: 0 0 14px var(--cyan), inset 0 0 18px rgba(0,240,255,.18);
+    padding: 14px 18px;
+    margin: 8px 0 22px;
+    text-align: center;
+  }
+  .scoreboard .lbl {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    color: var(--magenta);
+    text-shadow: 0 0 6px var(--magenta);
+    letter-spacing: 1px;
+  }
+  .scoreboard .amt {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 30px;
+    color: var(--lime);
+    text-shadow: 0 0 10px var(--lime);
+    margin-top: 12px;
+    letter-spacing: 1px;
+  }
+
+  .leaderboard {
+    margin-top: 16px;
+    border-top: 2px dashed var(--panel-line);
+    padding-top: 14px;
+  }
+  .lead-row {
+    display: flex; align-items: center; gap: 12px;
+    font-family: 'Press Start 2P', monospace;
+    padding: 8px 6px;
+    letter-spacing: 1px;
+  }
+  .lead-row .rank { font-size: 11px; width: 56px; text-align: left; }
+  .lead-row .who  { flex: 1; font-size: 11px; text-align: left; word-break: break-word; }
+  .lead-row .score { font-size: 12px; }
+  .lead-1 .rank, .lead-1 .who, .lead-1 .score { color: var(--yellow); text-shadow: 0 0 8px var(--orange); }
+  .lead-2 .rank, .lead-2 .who, .lead-2 .score { color: var(--cyan); text-shadow: 0 0 6px var(--cyan); }
+  .lead-3 .rank, .lead-3 .who, .lead-3 .score { color: var(--magenta); text-shadow: 0 0 6px var(--magenta); }
+  .lead-empty { font-family: 'VT323', monospace; font-size: 19px; color: var(--dim); padding: 6px; letter-spacing: 1px; }
+
+  .crown {
+    display: inline-block;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: #2a0022;
+    background: var(--yellow);
+    padding: 5px 8px;
+    border-radius: 3px;
+    margin-left: 8px;
+    box-shadow: 0 0 8px var(--yellow);
+    vertical-align: middle;
+  }
+
+  .add-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .add-bar input {
+    flex: 1;
+    min-width: 180px;
+    font-family: 'VT323', monospace;
+    font-size: 22px;
+    background: #06010f;
+    color: var(--cyan);
+    border: 2px solid var(--panel-line);
+    border-radius: 4px;
+    padding: 8px 12px;
+    outline: none;
+  }
+  .add-bar input::placeholder { color: var(--dim); }
+  .add-bar input:focus { border-color: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
+
+  button {
+    font-family: 'Press Start 2P', monospace;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    transition: transform .06s, filter .12s;
+  }
+  button:active { transform: translate(2px, 2px); }
+
+  .btn-add {
+    background: var(--lime);
+    color: #062b00;
+    font-size: 11px;
+    padding: 12px 16px;
+    box-shadow: 4px 4px 0 #4f7a00;
+  }
+  .btn-add:active { box-shadow: 0 0 0 #4f7a00; }
+
+  .employee {
+    border: 3px solid var(--magenta);
+    border-radius: 6px;
+    background: linear-gradient(180deg, var(--panel) 0%, #120630 100%);
+    box-shadow: 0 0 12px rgba(255,43,214,.4), inset 0 0 20px rgba(255,43,214,.08);
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .emp-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+    padding: 14px 16px;
+    background: rgba(255,43,214,.12);
+    border-bottom: 2px dashed var(--panel-line);
+  }
+  .emp-name {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    color: var(--yellow);
+    text-shadow: 0 0 6px var(--orange);
+    word-break: break-word;
+  }
+  .remove-emp {
+    background: transparent;
+    color: var(--dim);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    padding: 6px 8px;
+    border: 2px solid var(--panel-line);
+  }
+  .remove-emp:hover { color: var(--red); border-color: var(--red); }
+
+  .emp-total {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 4px 16px 2px;
+    padding: 14px 16px;
+    border: 2px solid var(--lime);
+    border-radius: 4px;
+    background: rgba(170,255,0,.08);
+    box-shadow: 0 0 10px rgba(170,255,0,.25), inset 0 0 14px rgba(170,255,0,.06);
+  }
+  .emp-total .lbl {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px; color: var(--dim); letter-spacing: 1px;
+  }
+  .emp-total .val {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 20px; color: var(--lime); text-shadow: 0 0 8px var(--lime);
+  }
+
+  .totals { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px; }
+  .tcell {
+    border: 2px solid var(--panel-line);
+    border-radius: 4px;
+    padding: 12px;
+    background: #06010f;
+    text-align: center;
+  }
+  .tcell .lbl {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: var(--dim);
+    letter-spacing: 1px;
+  }
+  .tcell .val {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 18px;
+    margin-top: 10px;
+  }
+  .tcell.pickups .val { color: var(--lime); text-shadow: 0 0 8px var(--lime); }
+  .tcell.endtot .val { color: var(--cyan); text-shadow: 0 0 8px var(--cyan); }
+
+  .diff-row {
+    margin: 0 16px 14px;
+    padding: 10px;
+    text-align: center;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    border-radius: 4px;
+    letter-spacing: 1px;
+  }
+  .diff-match { background: rgba(170,255,0,.15); color: var(--lime); border: 2px solid var(--lime); text-shadow: 0 0 6px var(--lime); }
+  .diff-over  { background: rgba(255,230,0,.12); color: var(--yellow); border: 2px solid var(--yellow); text-shadow: 0 0 6px var(--yellow); }
+  .diff-short { background: rgba(255,59,59,.14); color: var(--red); border: 2px solid var(--red); text-shadow: 0 0 6px var(--red); }
+
+  .pickups-list { padding: 0 16px; }
+  .pickup-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px dashed var(--panel-line);
+    font-size: 22px;
+  }
+  .pickup-item:last-child { border-bottom: none; }
+  .pickup-item .seq {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: var(--magenta);
+    width: 34px;
+  }
+  .pickup-item .pamt { flex: 1; color: var(--lime); letter-spacing: 1px; }
+  .del-pickup {
+    background: transparent;
+    color: var(--dim);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px;
+    padding: 2px 8px;
+  }
+  .del-pickup:hover { color: var(--red); }
+  .empty { color: var(--dim); font-size: 20px; padding: 10px 0; letter-spacing: 1px; }
+
+  .emp-inputs { display: flex; gap: 10px; padding: 14px 16px 18px; flex-wrap: wrap; }
+  .field { position: relative; flex: 1; min-width: 150px; }
+  .field .dollar {
+    position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+    color: var(--lime); font-size: 22px;
+  }
+  .field input {
+    width: 100%;
+    font-family: 'VT323', monospace;
+    font-size: 22px;
+    background: #06010f;
+    color: var(--lime);
+    border: 2px solid var(--panel-line);
+    border-radius: 4px;
+    padding: 8px 10px 8px 24px;
+    outline: none;
+  }
+  .field input::placeholder { color: var(--dim); }
+  .field input:focus { border-color: var(--lime); box-shadow: 0 0 8px var(--lime); }
+
+  .btn-pickup {
+    background: var(--magenta); color: #2a0022;
+    font-size: 10px; padding: 10px 14px;
+    box-shadow: 4px 4px 0 #8a0072;
+  }
+  .btn-pickup:active { box-shadow: 0 0 0 #8a0072; }
+  .btn-end {
+    background: var(--cyan); color: #002b30;
+    font-size: 10px; padding: 10px 14px;
+    box-shadow: 4px 4px 0 #007a85;
+  }
+  .btn-end:active { box-shadow: 0 0 0 #007a85; }
+
+  .blank-state {
+    text-align: center;
+    border: 3px dashed var(--panel-line);
+    border-radius: 6px;
+    padding: 44px 20px;
+    color: var(--dim);
+    font-size: 22px;
+    letter-spacing: 1px;
+  }
+  .blank-state .big {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 13px;
+    color: var(--cyan);
+    display: block;
+    margin-bottom: 16px;
+    text-shadow: 0 0 8px var(--cyan);
+  }
+
+  .footer-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: linear-gradient(180deg, rgba(10,1,24,.4), var(--bg) 60%);
+    border-top: 3px solid var(--magenta);
+    box-shadow: 0 -4px 14px rgba(255,43,214,.3);
+    padding: 12px 14px;
+    z-index: 40;
+  }
+  .footer-inner {
+    max-width: 760px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .footer-inner .summary {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px; color: var(--cyan); letter-spacing: 1px;
+  }
+  .btn-clear {
+    background: var(--red); color: #2a0000;
+    font-size: 10px; padding: 11px 16px;
+    box-shadow: 4px 4px 0 #8a0000;
+  }
+  .btn-clear:active { box-shadow: 0 0 0 #8a0000; }
+
+  @media (max-width: 480px) {
+    header h1 { font-size: 16px; }
+    .scoreboard .amt { font-size: 22px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .blink { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>CASH PICKUP</h1>
+    <div class="sub">★ INSERT CASH <span class="blink">_</span></div>
+  </header>
+
+  <div class="scoreboard">
+    <div class="lbl">HIGH SCORE — TONIGHT</div>
+    <div class="amt" id="grandTotal">$0.00</div>
+    <div class="leaderboard" id="leaderboard"></div>
+  </div>
+
+  <div class="add-bar">
+    <input type="text" id="newEmpName" placeholder="ENTER CLERK NAME..." autocomplete="off">
+    <button class="btn-add" id="addEmpBtn">+ ADD CLERK</button>
+  </div>
+
+  <div id="employees"></div>
+</div>
+
+<div class="footer-bar">
+  <div class="footer-inner">
+    <div class="summary" id="footerSummary">NO PLAYERS</div>
+    <button class="btn-clear" id="clearBtn">GAME OVER — CLEAR</button>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = "cashPickupTracker.arcade.v1";
+  let employees = load();
+
+  function load() {
+    try { const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : []; }
+    catch (e) { return []; }
+  }
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(employees)); } catch (e) {}
+  }
+  function fmt(n) {
+    return "$" + (Number(n) || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  function addEmployee() {
+    const input = document.getElementById("newEmpName");
+    const name = input.value.trim();
+    if (!name) { input.focus(); return; }
+    employees.push({ id: uid(), name, pickups: [] });
+    input.value = "";
+    save(); render();
+  }
+  function removeEmployee(id) {
+    const emp = employees.find(e => e.id === id);
+    if (emp && emp.pickups.length) {
+      if (!confirm(`Remove ${emp.name} and their logged pickups?`)) return;
+    }
+    employees = employees.filter(e => e.id !== id);
+    save(); render();
+  }
+  function addPickup(id) {
+    const field = document.getElementById("pickup-" + id);
+    const val = parseFloat(field.value);
+    if (isNaN(val) || val === 0) { field.focus(); return; }
+    const emp = employees.find(e => e.id === id);
+    emp.pickups.push({ id: uid(), amount: Math.round(val * 100) / 100 });
+    field.value = "";
+    save(); render();
+    const f = document.getElementById("pickup-" + id);
+    if (f) f.focus();
+  }
+  function deletePickup(empId, pickupId) {
+    const emp = employees.find(e => e.id === empId);
+    emp.pickups = emp.pickups.filter(p => p.id !== pickupId);
+    save(); render();
+  }
+  let clearArmed = false;
+  let clearTimer = null;
+  function clearAll() {
+    if (!employees.length) return;
+    const btn = document.getElementById("clearBtn");
+    // Try native confirm; some embedded/sandbox previews block it.
+    let ok = null;
+    try { ok = window.confirm("GAME OVER? This clears all clerks and pickups for the night. Can't be undone."); }
+    catch (e) { ok = null; }
+
+    if (ok === true) { doClear(btn); return; }
+
+    // Two-tap fallback (works even where the dialog is blocked):
+    // first tap arms the button, second tap within 4s clears.
+    if (!clearArmed) {
+      clearArmed = true;
+      btn.textContent = "TAP AGAIN TO CONFIRM";
+      clearTimer = setTimeout(() => {
+        clearArmed = false;
+        btn.textContent = "GAME OVER — CLEAR";
+      }, 4000);
+      return;
+    }
+    doClear(btn);
+  }
+  function doClear(btn) {
+    clearTimeout(clearTimer);
+    clearArmed = false;
+    employees = [];
+    save(); render();
+    if (btn) btn.textContent = "GAME OVER — CLEAR";
+  }
+  function pickupSum(emp) { return emp.pickups.reduce((s, p) => s + p.amount, 0); }
+
+  function render() {
+    const container = document.getElementById("employees");
+    container.innerHTML = "";
+    let grand = 0;
+
+    // Rank clerks by their total pickup amount (highest first)
+    const ranked = employees
+      .filter(e => e.pickups.length > 0)
+      .slice()
+      .sort((a, b) => pickupSum(b) - pickupSum(a));
+    const leaderId = ranked.length ? ranked[0].id : null;
+    renderLeaderboard(ranked);
+
+    if (!employees.length) {
+      container.innerHTML = `<div class="blank-state"><span class="big">PLAYER 1 — READY?</span>Add your first clerk above to start logging pickups.</div>`;
+    }
+
+    employees.forEach(emp => {
+      const sum = pickupSum(emp);
+      grand += sum;
+      const card = document.createElement("div");
+      card.className = "employee";
+
+      const pickupsHTML = emp.pickups.length
+        ? emp.pickups.map((p, i) => `
+            <div class="pickup-item">
+              <span class="seq">P${i + 1}</span>
+              <span class="pamt">${fmt(p.amount)}</span>
+              <button class="del-pickup" data-del="${emp.id}|${p.id}" title="Delete pickup">X</button>
+            </div>`).join("")
+        : `<div class="empty">No pickups logged yet.</div>`;
+
+      card.innerHTML = `
+        <div class="emp-head">
+          <span class="emp-name">${escapeHtml(emp.name)}${emp.id === leaderId ? '<span class="crown">★ 1ST</span>' : ''}</span>
+          <button class="remove-emp" data-remove="${emp.id}">REMOVE</button>
+        </div>
+        <div class="pickups-list">${pickupsHTML}</div>
+        <div class="emp-total">
+          <span class="lbl">TOTAL PICKED UP</span>
+          <span class="val">${fmt(sum)}</span>
+        </div>
+        <div class="emp-inputs">
+          <div class="field">
+            <span class="dollar">$</span>
+            <input type="number" step="0.01" inputmode="decimal" id="pickup-${emp.id}" placeholder="PICKUP AMT" data-pickup="${emp.id}">
+          </div>
+          <button class="btn-pickup" data-addpickup="${emp.id}">ADD PICKUP</button>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+
+    document.getElementById("grandTotal").textContent = fmt(grand);
+    const count = employees.length;
+    document.getElementById("footerSummary").textContent =
+      count ? `${count} PLAYER${count > 1 ? "S" : ""} · ${fmt(grand)}` : "NO PLAYERS";
+  }
+
+  function renderLeaderboard(ranked) {
+    const el = document.getElementById("leaderboard");
+    if (!ranked.length) {
+      el.innerHTML = `<div class="lead-empty">Add a pickup to claim the high score.</div>`;
+      return;
+    }
+    const medals = ["1ST", "2ND", "3RD"];
+    el.innerHTML = ranked.slice(0, 3).map((e, i) => `
+      <div class="lead-row lead-${i + 1}">
+        <span class="rank">${medals[i]}</span>
+        <span class="who">${escapeHtml(e.name)}</span>
+        <span class="score">${fmt(pickupSum(e))}</span>
+      </div>`).join("");
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
+  document.getElementById("addEmpBtn").addEventListener("click", addEmployee);
+  document.getElementById("newEmpName").addEventListener("keydown", e => { if (e.key === "Enter") addEmployee(); });
+  document.getElementById("clearBtn").addEventListener("click", clearAll);
+
+  document.getElementById("employees").addEventListener("click", e => {
+    const t = e.target;
+    if (t.dataset.remove) removeEmployee(t.dataset.remove);
+    else if (t.dataset.addpickup) addPickup(t.dataset.addpickup);
+    else if (t.dataset.del) { const [emp, pid] = t.dataset.del.split("|"); deletePickup(emp, pid); }
+  });
+  document.getElementById("employees").addEventListener("keydown", e => {
+    if (e.key !== "Enter") return;
+    const t = e.target;
+    if (t.dataset.pickup) addPickup(t.dataset.pickup);
+  });
+
+  render();
+</script>
+</body>
+</html>
